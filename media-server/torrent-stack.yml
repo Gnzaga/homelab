@@ -99,15 +99,17 @@ services:
     environment:
       - LOG_LEVEL=${LOG_LEVEL}
     restart: unless-stopped
+
   #overseerr is a platform where users can request content for an admin(s) to process and grant
-  overseerr:
-    image: sctx/overseerr:latest
-    container_name: overseerr
+  jellyseerr:
+    image: ghcr.io/fallenbagel/jellyseerr:latest
+    container_name: jellyseerr
+    environment:
+      - LOG_LEVEL=debug
+      - TZ=Asia/Tashkent
+      - PORT=5055 #optional
     ports:
       - 5055:5055
-    environment:
-      - LOG_LEVEL=${LOG_LEVEL}
-      - TZ=${TZ}
     volumes:
-      - ${OVERSEERR_VOLUME}:/app/config
+      - /path/to/appdata/config:/app/config
     restart: unless-stopped
