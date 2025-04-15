@@ -113,3 +113,19 @@ services:
     volumes:
       - /path/to/appdata/config:/app/config
     restart: unless-stopped
+#Jellyfin, the media server
+jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    runtime: nvidia
+    network_mode: host
+    environment:
+      - TZ=${TZ}
+      - NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES}
+      - NVIDIA_DRIVER_CAPABILITIES=${NVIDIA_DRIVER_CAPABILITIES}
+      - JELLYFIN_PublishedServerUrl=${JELLYFIN_PUBLISHED_SERVER_URL}
+    volumes:
+      - ${MEDIA_SERVER_CONFIG}:/config
+      - ${MEDIA_SERVER_CACHE}:/cache
+      - ${MEDIA_SERVER_MEDIA}:/media
+    restart: unless-stopped
