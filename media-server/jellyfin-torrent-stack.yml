@@ -24,6 +24,7 @@ services:
       - ${MEDIA_SERVER_MEDIA}:/data/media
     ports:
       - 8080:8080       # qBittorrent Web UI
+      - 6789:6789       # NZBGet UI
       - 6881:6881
       - 6881:6881/udp
     restart: unless-stopped
@@ -44,6 +45,24 @@ services:
     volumes:
       - ${QBITTORRENT_VOLUME}:/config
       - ${MEDIA_SERVER_MEDIA}:/data/media
+    restart: unless-stopped
+
+  # NZB client (VPN)
+  nzbget:
+    image: linuxserver/nzbget
+    container_name: nzbget
+    network_mode: "service:gluetun"
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${NZBGET_VOLUME}:/config
+      - ${MEDIA_SERVER_MEDIA}:/data/media
+      - ${NZBGET_Downloads}:/downloads
     restart: unless-stopped
     
   #Sonar is manage for automating downloads of tv shows, this lies outside the gluetun network
@@ -75,6 +94,37 @@ services:
       - ${MEDIA_SERVER_MEDIA}:/data/media
     restart: unless-stopped
 
+  # Lidarr is managed for automating downloads of music, this lies outside the gluetun network  
+  lidarr:
+    image: linuxserver/lidarr
+    container_name: lidarr
+    ports:
+      - 8686:8686
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${LIDARR_VOLUME}:/config
+      - ${MEDIA_SERVER_MEDIA}:/data/media
+    restart: unless-stopped
+
+
+  #Bazarr is a companion tool to Sonarr and Radarr for managing subtitles
+  bazarr:
+    image: linuxserver/bazarr
+    container_name: bazarr
+    ports:
+      - 6767:6767
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${BAZARR_VOLUME}:/config
+      - ${MEDIA_SERVER_MEDIA}:/data/media
+    restart: unless-stopped
+
   #Prowlarr is an integrated indexer that automatically updates to Radarr and Sonarr
   #it allows you to add indexers once, and them apply to all your downstream services
   prowlarr:
@@ -100,24 +150,9 @@ services:
       - LOG_LEVEL=${LOG_LEVEL}
     restart: unless-stopped
 
-  #overseerr is a platform where users can request content for an admin(s) to process and grant
-  jellyseerr:
-    image: ghcr.io/fallenbagel/jellyseerr:latest
-    container_name: jellyseerr
-    environment:
-      - LOG_LEVEL=debug
-      - TZ=Asia/Tashkent
-      - PORT=5055 #optional
-    ports:
-      - 5055:5055
-    volumes:
-      - /path/to/appdata/config:/app/config
-    restart: unless-stopped
-#Jellyfin, the media server
-jellyfin:
+  jellyfin:
     image: jellyfin/jellyfin:latest
     container_name: jellyfin
-    runtime: nvidia
     network_mode: host
     environment:
       - TZ=${TZ}
@@ -128,4 +163,25 @@ jellyfin:
       - ${MEDIA_SERVER_CONFIG}:/config
       - ${MEDIA_SERVER_CACHE}:/cache
       - ${MEDIA_SERVER_MEDIA}:/media
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
+
+  #overseerr is a platform where users can request content for an admin(s) to process and grant
+  jellyseerr:
+    image: ghcr.io/fallenbagel/jellyseerr:latest
+    container_name: jellyseerr
+    environment:
+      - LOG_LEVEL=debug
+      - TZ=${TZ}
+      - PORT=5055 #optional
+    ports:
+      - 5055:5055
+    volumes:
+      - ${JELLYSEER_VOLUME}:/app/config
     restart: unless-stopped
